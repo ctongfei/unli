@@ -12,7 +12,10 @@ This repository hosts the code for the following paper:
 This repository uses [Ducttape](https://github.com/jhclark/ducttape) to manage intermediate results 
 of the experiment pipeline.
 
-To run a portion of the pipeline, use the following command:
+To run a portion of the pipeline, first clone this repository to your location, then in `unli.tape`,
+modify `package unli .path` variable to where your location of this repository is.
+
+Then use the following command:
 
   ```bash
     ducttape unli.tape -p <TASK>
