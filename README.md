@@ -4,7 +4,7 @@ This repository hosts the code for the following paper:
  * Tongfei Chen*, Zhengping Jiang*, Adam Poliak, Keisuke Sakaguchi, Benjamin Van Durme (2020): 
    Uncertain natural language inference. In _Proceedings of ACL_.
 
-### Preprequisites
+### Prerequisites
  * Python >= 3.6
 
 ### Running
