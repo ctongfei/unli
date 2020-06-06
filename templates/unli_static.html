@@ -1,0 +1,629 @@
+<link href="https://s3.amazonaws.com/mturk-public/bs30/css/bootstrap.min.css" rel="stylesheet" />
+<section class="container" id="Other" style="margin-bottom:15px; padding: 10px 10px; font-family: sans-serif, Verdana, Geneva  ; color:#333333; font-size:1.0em;">
+<style type="text/css">table, th, td { border: 1px solid black; border-collapse: collapse; } th, td { padding: 5px; text-align: left; table-layout: fixed; font-size:15px; } .sentence {font-size:16px;} .panel-heading { background-color: #EEEBFF !important; border: 0px solid ; } .panel-primary { border-color: #FFFFFF; border: 0px solid #FFFFFF; } .emph{color: #EC407A;} .blue{color: #0000FF;} .red{color: #FF0000;} .instr { font-family: sans-serif, Verdana, Geneva; font-size: 15px; line-height: 20px; width: 88%; } #slidecontainer { width: 100%; /* Width of the outside container */ } .slider { -webkit-appearance: none; /* Override default CSS styles */ appearance: none; width: 40%; /* Full-width */ height: 10px; /* Specified height */ background: #b4b4b4; /* Grey background */ outline: none; /* Remove outline */ opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */ -webkit-transition: .2s; /* 0.2 seconds transition on hover */ transition: opacity .2s; } /* Mouse-over effects */ .slider:hover { opacity: 1; /* Fully shown on mouse-over */ } /* The slider handle (use webkit (Chrome, Opera, Safari, Edge) and moz (Firefox) to override default look) */ .slider::-webkit-slider-thumb { -webkit-appearance: none; /* Override default look */ appearance: none; width: 25px; /* Set a specific slider handle width */ height: 25px; /* Slider handle height */ background: #ffffff; /* Green background */ border: 2px solid #EC407A; cursor: pointer; /* Cursor on hover */ } .slider::-moz-range-thumb { width: 25px; /* Set a specific slider handle width */ height: 25px; /* Slider handle height */ background: #ffffff; /* Green background */ border: 2px solid #EC407A; cursor: pointer; /* Cursor on hover */ }
+</style>
+<script src="https://code.jquery.com/jquery-3.3.1.js"
+        integrity="sha256-2Kok7MbOyxpgUVvAk/HJ2jigOSYS2auK4Pfzbm7uH60="
+        crossorigin="anonymous"></script><script type="text/javascript">
+        function toggle(){
+            if ((document.getElementById("examples").style.display) =="block"){
+                document.getElementById("examples").style.display="none";
+            }
+            else{
+                document.getElementById("examples").style.display="block";
+            }
+        }
+
+        Color = function(hexOrObject) {
+            var obj;
+            if (hexOrObject instanceof Object) {
+                obj = hexOrObject;
+            } else {
+                obj = LinearColorInterpolator.convertHexToRgb(hexOrObject);
+            }
+            this.r = obj.r;
+            this.g = obj.g;
+            this.b = obj.b;
+        }
+        Color.prototype.asRgbCss = function() {
+            return "rgb("+this.r+", "+this.g+", "+this.b+")";
+        }
+
+        var LinearColorInterpolator = {
+            // convert 6-digit hex to rgb components;
+            // accepts with or without hash ("335577" or "#335577")
+            convertHexToRgb: function(hex) {
+                match = hex.replace(/#/,'').match(/.{1,2}/g);
+                return new Color({
+                    r: parseInt(match[0], 16),
+                    g: parseInt(match[1], 16),
+                    b: parseInt(match[2], 16)
+                });
+            },
+            // left and right are colors that you're aiming to find
+            // a color between. Percentage (0-100) indicates the ratio
+            // of right to left. Higher percentage means more right,
+            // lower means more left.
+            findColorBetween: function(left, right, percentage) {
+                newColor = {};
+                components = ["r", "g", "b"];
+                for (var i = 0; i < components.length; i++) {
+                    c = components[i];
+                    newColor[c] = Math.round(left[c] + (right[c] - left[c]) * percentage / 100);
+                }
+                return new Color(newColor);
+            }
+        }
+
+        var ultimate_red = new Color("#FF0000");
+        var ultimate_blue = new Color("#0000FF");
+
+        function sigmoid(t) {
+          if (t <= 0.) {
+            return 1/(1+Math.pow(1.0 * Math.E, -0.3 * t));
+          }
+          return 1/(1+Math.pow(1.0 * Math.E, -0.02 * t));
+        }
+
+        function inversesigmoid(t) {
+            var minimum = sigmoid(-50.00);
+            var middle = .5;
+            var maximum = sigmoid(50.00);
+            var real_y = 0;
+            if (t > 50.0) {
+              real_y = (t - 50.00) / 50.00 * (maximum - middle) + middle;
+            }
+            else {
+              real_y = t / 50.00 * (middle - minimum) + minimum;
+            }
+            var x = (1 / -0.3) * Math.log(1. / real_y - 1) / Math.log(1.0 * Math.E);
+            if (real_y > 0.5) {
+              x = (1 / -0.02) * Math.log(1. / real_y - 1) / Math.log(1.0 * Math.E);
+            }
+            return x + 50.00;
+        }
+
+        function updateSlider1(slideAmount) {
+            var sliderDiv = document.getElementById("myRange1");
+            var to_fixed = slideAmount / 100.;
+            var update_value = 0;
+            if (to_fixed <= 50.00) {
+              update_value = (sigmoid(to_fixed - 50.0) - sigmoid(-50.0)) / (.5 - sigmoid(-50.0)) * 50.;
+            }
+            else {
+              update_value = ((sigmoid(to_fixed - 50.0) - 0.5) / (sigmoid(50.0) - 0.5)) * 50. + 50.;
+            }
+            // We have to redesign the odd representation.
+            if (update_value > 0. && update_value <= 50.00) {
+              var normalize = 100. / update_value;
+              var text = "<span style=\"color: black;\">a </span><strong>" + 1 + " in " + normalize.toLocaleString() + "</strong>";
+              sliderDiv.innerHTML = text;
+            }
+            else if (update_value > 50.00) {
+              var text = "<span style=\"color: black;\">a </span><strong>" + update_value.toFixed(5) + "%<stong>";
+              sliderDiv.innerHTML = text;
+            }
+            else {
+              sliderDiv.innerHTML = "<strong>no</strong>";
+            }
+            // We have to redesign the odd representation.
+            $('#il1').val(update_value);
+            $('#iu1').val(update_value);
+            // Do color interpolation
+            var background_color = LinearColorInterpolator.findColorBetween(ultimate_red, ultimate_blue, update_value).asRgbCss();
+            $('#myRange1').css("color", background_color);
+
+        }
+        function updateSlider2(slideAmount) {
+            var sliderDiv = document.getElementById("myRange2");
+            var to_fixed = slideAmount / 100.;
+            var update_value = 0;
+            if (to_fixed <= 50.00) {
+              update_value = (sigmoid(to_fixed - 50.0) - sigmoid(-50.0)) / (.5 - sigmoid(-50.0)) * 50.;
+            }
+            else {
+              update_value = ((sigmoid(to_fixed - 50.0) - 0.5) / (sigmoid(50.0) - 0.5)) * 50. + 50.;
+            }
+            // We have to redesign the odd representation.
+            if (update_value > 0. && update_value <= 50.00) {
+              var normalize = 100. / update_value;
+              var text = "<span style=\"color: black;\">a </span><strong>" + 1 + " in " + normalize.toLocaleString() + "</strong>";
+              sliderDiv.innerHTML = text;
+            }
+            else if (update_value > 50.00) {
+              var text = "<span style=\"color: black;\">a </span><strong>" + update_value.toFixed(5) + "%<stong>";
+              sliderDiv.innerHTML = text;
+            }
+            else {
+              sliderDiv.innerHTML = "<strong>no</strong>";
+            }
+            // We have to redesign the odd representation.
+            $('#il2').val(update_value);
+            $('#iu2').val(update_value);
+            // Do color interpolation
+            var background_color = LinearColorInterpolator.findColorBetween(ultimate_red, ultimate_blue, update_value).asRgbCss();
+            $('#myRange2').css("color", background_color);
+
+        }
+        function updateSlider3(slideAmount) {
+            var sliderDiv = document.getElementById("myRange3");
+            var to_fixed = slideAmount / 100.;
+            var update_value = 0;
+            if (to_fixed <= 50.00) {
+              update_value = (sigmoid(to_fixed - 50.0) - sigmoid(-50.0)) / (.5 - sigmoid(-50.0)) * 50.;
+            }
+            else {
+              update_value = ((sigmoid(to_fixed - 50.0) - 0.5) / (sigmoid(50.0) - 0.5)) * 50. + 50.;
+            }
+            // We have to redesign the odd representation.
+            if (update_value > 0. && update_value <= 50.00) {
+              var normalize = 100. / update_value;
+              var text = "<span style=\"color: black;\">a </span><strong>" + 1 + " in " + normalize.toLocaleString() + "</strong>";
+              sliderDiv.innerHTML = text;
+            }
+            else if (update_value > 50.00) {
+              var text = "<span style=\"color: black;\">a </span><strong>" + update_value.toFixed(5) + "%<stong>";
+              sliderDiv.innerHTML = text;
+            }
+            else {
+              sliderDiv.innerHTML = "<strong>no</strong>";
+            }
+            // We have to redesign the odd representation.
+            $('#il3').val(update_value);
+            $('#iu3').val(update_value);
+            // Do color interpolation
+            var background_color = LinearColorInterpolator.findColorBetween(ultimate_red, ultimate_blue, update_value).asRgbCss();
+            $('#myRange3').css("color", background_color);
+
+        }
+        function updateSlider4(slideAmount) {
+            var sliderDiv = document.getElementById("myRange4");
+            var to_fixed = slideAmount / 100.;
+            var update_value = 0;
+            if (to_fixed <= 50.00) {
+              update_value = (sigmoid(to_fixed - 50.0) - sigmoid(-50.0)) / (.5 - sigmoid(-50.0)) * 50.;
+            }
+            else {
+              update_value = ((sigmoid(to_fixed - 50.0) - 0.5) / (sigmoid(50.0) - 0.5)) * 50. + 50.;
+            }
+            // We have to redesign the odd representation.
+            if (update_value > 0. && update_value <= 50.00) {
+              var normalize = 100. / update_value;
+              var text = "<span style=\"color: black;\">a </span><strong>" + 1 + " in " + normalize.toLocaleString() + "</strong>";
+              sliderDiv.innerHTML = text;
+            }
+            else if (update_value > 50.00) {
+              var text = "<span style=\"color: black;\">a </span><strong>" + update_value.toFixed(5) + "%<stong>";
+              sliderDiv.innerHTML = text;
+            }
+            else {
+              sliderDiv.innerHTML = "<strong>no</strong>";
+            }
+            // We have to redesign the odd representation.
+            $('#il4').val(update_value);
+            $('#iu4').val(update_value);
+            // Do color interpolation
+            var background_color = LinearColorInterpolator.findColorBetween(ultimate_red, ultimate_blue, update_value).asRgbCss();
+            $('#myRange4').css("color", background_color);
+        }
+        function updateSlider5(slideAmount) {
+            var sliderDiv = document.getElementById("myRange5");
+            var to_fixed = slideAmount / 100.;
+            var update_value = 0;
+            if (to_fixed <= 50.00) {
+              update_value = (sigmoid(to_fixed - 50.0) - sigmoid(-50.0)) / (.5 - sigmoid(-50.0)) * 50.;
+            }
+            else {
+              update_value = ((sigmoid(to_fixed - 50.0) - 0.5) / (sigmoid(50.0) - 0.5)) * 50. + 50.;
+            }
+            // We have to redesign the odd representation.
+            if (update_value > 0. && update_value <= 50.00) {
+              var normalize = 100. / update_value;
+              var text = "<span style=\"color: black;\">a </span><strong>" + 1 + " in " + normalize.toLocaleString() + "</strong>";
+              sliderDiv.innerHTML = text;
+            }
+            else if (update_value > 50.00) {
+              var text = "<span style=\"color: black;\">a </span><strong>" + update_value.toFixed(5) + "%<stong>";
+              sliderDiv.innerHTML = text;
+            }
+            else {
+              sliderDiv.innerHTML = "<strong>no</strong>";
+            }
+            // We have to redesign the odd representation.
+            $('#il5').val(update_value);
+            $('#iu5').val(update_value);
+            // Do color interpolation
+            var background_color = LinearColorInterpolator.findColorBetween(ultimate_red, ultimate_blue, update_value).asRgbCss();
+            $('#myRange5').css("color", background_color);
+
+        }
+
+        function updateSlider6(slideAmount) {
+            var sliderDiv = document.getElementById("myRange6");
+            var to_fixed = slideAmount / 100.;
+            var update_value = 0;
+            if (to_fixed <= 50.00) {
+              update_value = (sigmoid(to_fixed - 50.0) - sigmoid(-50.0)) / (.5 - sigmoid(-50.0)) * 50.;
+            }
+            else {
+              update_value = ((sigmoid(to_fixed - 50.0) - 0.5) / (sigmoid(50.0) - 0.5)) * 50. + 50.;
+            }
+            // We have to redesign the odd representation.
+            if (update_value > 0. && update_value <= 50.00) {
+              var normalize = 100. / update_value;
+              var text = "<span style=\"color: black;\">a </span><strong>" + 1 + " in " + normalize.toLocaleString() + "</strong>";
+              sliderDiv.innerHTML = text;
+            }
+            else if (update_value > 50.00) {
+              var text = "<span style=\"color: black;\">a </span><strong>" + update_value.toFixed(5) + "%<stong>";
+              sliderDiv.innerHTML = text;
+            }
+            else {
+              sliderDiv.innerHTML = "<strong>no</strong>";
+            }
+            // We have to redesign the odd representation.
+            $('#il6').val(update_value);
+            $('#iu6').val(update_value);
+            // Do color interpolation
+            var background_color = LinearColorInterpolator.findColorBetween(ultimate_red, ultimate_blue, update_value).asRgbCss();
+            $('#myRange6').css("color", background_color);
+
+        }
+
+        function updateSlider7(slideAmount) {
+            var sliderDiv = document.getElementById("myRange7");
+            var to_fixed = slideAmount / 100.;
+            var update_value = 0;
+            if (to_fixed <= 50.00) {
+              update_value = (sigmoid(to_fixed - 50.0) - sigmoid(-50.0)) / (.5 - sigmoid(-50.0)) * 50.;
+            }
+            else {
+              update_value = ((sigmoid(to_fixed - 50.0) - 0.5) / (sigmoid(50.0) - 0.5)) * 50. + 50.;
+            }
+            // We have to redesign the odd representation.
+            if (update_value > 0. && update_value <= 50.00) {
+              var normalize = 100. / update_value;
+              var text = "<span style=\"color: black;\">a </span><strong>" + 1 + " in " + normalize.toLocaleString() + "</strong>";
+              sliderDiv.innerHTML = text;
+            }
+            else if (update_value > 50.00) {
+              var text = "<span style=\"color: black;\">a </span><strong>" + update_value.toFixed(5) + "%<stong>";
+              sliderDiv.innerHTML = text;
+            }
+            else {
+              sliderDiv.innerHTML = "<strong>no</strong>";
+            }
+            // We have to redesign the odd representation.
+            $('#il7').val(update_value);
+            $('#iu7').val(update_value);
+            // Do color interpolation
+            var background_color = LinearColorInterpolator.findColorBetween(ultimate_red, ultimate_blue, update_value).asRgbCss();
+            $('#myRange7').css("color", background_color);
+
+        }
+
+        function updateSlider8(slideAmount) {
+            var sliderDiv = document.getElementById("myRange8");
+            var to_fixed = slideAmount / 100.;
+            var update_value = 0;
+            if (to_fixed <= 50.00) {
+              update_value = (sigmoid(to_fixed - 50.0) - sigmoid(-50.0)) / (.5 - sigmoid(-50.0)) * 50.;
+            }
+            else {
+              update_value = ((sigmoid(to_fixed - 50.0) - 0.5) / (sigmoid(50.0) - 0.5)) * 50. + 50.;
+            }
+            // We have to redesign the odd representation.
+            if (update_value > 0. && update_value <= 50.00) {
+              var normalize = 100. / update_value;
+              var text = "<span style=\"color: black;\">a </span><strong>" + 1 + " in " + normalize.toLocaleString() + "</strong>";
+              sliderDiv.innerHTML = text;
+            }
+            else if (update_value > 50.00) {
+              var text = "<span style=\"color: black;\">a </span><strong>" + update_value.toFixed(5) + "%<stong>";
+              sliderDiv.innerHTML = text;
+            }
+            else {
+              sliderDiv.innerHTML = "<strong>no</strong>";
+            }
+            // We have to redesign the odd representation.
+            $('#il8').val(update_value);
+            $('#iu8').val(update_value);
+            // Do color interpolation
+            var background_color = LinearColorInterpolator.findColorBetween(ultimate_red, ultimate_blue, update_value).asRgbCss();
+            $('#myRange8').css("color", background_color);
+
+        }
+
+        function updateSlider9(slideAmount) {
+            var sliderDiv = document.getElementById("myRange9");
+            var to_fixed = slideAmount / 100.;
+            var update_value = 0;
+            if (to_fixed <= 50.00) {
+              update_value = (sigmoid(to_fixed - 50.0) - sigmoid(-50.0)) / (.5 - sigmoid(-50.0)) * 50.;
+            }
+            else {
+              update_value = ((sigmoid(to_fixed - 50.0) - 0.5) / (sigmoid(50.0) - 0.5)) * 50. + 50.;
+            }
+            // We have to redesign the odd representation.
+            if (update_value > 0. && update_value <= 50.00) {
+              var normalize = 100. / update_value;
+              var text = "<span style=\"color: black;\">a </span><strong>" + 1 + " in " + normalize.toLocaleString() + "</strong>";
+              sliderDiv.innerHTML = text;
+            }
+            else if (update_value > 50.00) {
+              var text = "<span style=\"color: black;\">a </span><strong>" + update_value.toFixed(5) + "%<stong>";
+              sliderDiv.innerHTML = text;
+            }
+            else {
+              sliderDiv.innerHTML = "<strong>no</strong>";
+            }
+            // We have to redesign the odd representation.
+            $('#il9').val(update_value);
+            $('#iu9').val(update_value);
+            // Do color interpolation
+            var background_color = LinearColorInterpolator.findColorBetween(ultimate_red, ultimate_blue, update_value).asRgbCss();
+            $('#myRange9').css("color", background_color);
+
+        }
+
+        function updateSlider10(slideAmount) {
+            var sliderDiv = document.getElementById("myRange10");
+            var to_fixed = slideAmount / 100.;
+            var update_value = 0;
+            if (to_fixed <= 50.00) {
+              update_value = (sigmoid(to_fixed - 50.0) - sigmoid(-50.0)) / (.5 - sigmoid(-50.0)) * 50.;
+            }
+            else {
+              update_value = ((sigmoid(to_fixed - 50.0) - 0.5) / (sigmoid(50.0) - 0.5)) * 50. + 50.;
+            }
+            // We have to redesign the odd representation.
+            if (update_value > 0. && update_value <= 50.00) {
+              var normalize = 100. / update_value;
+              var text = "<span style=\"color: black;\">a </span><strong>" + 1 + " in " + normalize.toLocaleString() + "</strong>";
+              sliderDiv.innerHTML = text;
+            }
+            else if (update_value > 50.00) {
+              var text = "<span style=\"color: black;\">a </span><strong>" + update_value.toFixed(5) + "%<stong>";
+              sliderDiv.innerHTML = text;
+            }
+            else {
+              sliderDiv.innerHTML = "<strong>no</strong>";
+            }
+            // We have to redesign the odd representation.
+            $('#il10').val(update_value);
+            $('#iu10').val(update_value);
+            // Do color interpolation
+            var background_color = LinearColorInterpolator.findColorBetween(ultimate_red, ultimate_blue, update_value).asRgbCss();
+            $('#myRange10').css("color", background_color);
+
+        }
+
+    var utf8ByteArrayToString = function(bytes) {
+      var out = [], pos = 0, c = 0;
+      while (pos < bytes.length) {
+        var c1 = bytes[pos++];
+        if (c1 < 128) {
+          out[c++] = String.fromCharCode(c1);
+        } else if (c1 > 191 && c1 < 224) {
+          var c2 = bytes[pos++];
+          out[c++] = String.fromCharCode((c1 & 31) << 6 | c2 & 63);
+        } else if (c1 > 239 && c1 < 365) {
+          // Surrogate Pair
+          var c2 = bytes[pos++];
+          var c3 = bytes[pos++];
+          var c4 = bytes[pos++];
+          var u = ((c1 & 7) << 18 | (c2 & 63) << 12 | (c3 & 63) << 6 | c4 & 63) -
+                  0x10000;
+          out[c++] = String.fromCharCode(0xD800 + (u >> 10));
+          out[c++] = String.fromCharCode(0xDC00 + (u & 1023));
+        } else {
+          var c2 = bytes[pos++];
+          var c3 = bytes[pos++];
+          out[c++] =
+            String.fromCharCode((c1 & 15) << 12 | (c2 & 63) << 6 | c3 & 63);
+        }
+      }
+      return out.join('');
+    };
+
+    function displayEmoji() {
+      $(this).text(utf8ByteArrayToString(JSON.parse($(this).attr('data-emoji-bytes'))));
+    }
+
+    $( document ).ready(function() {
+      $('span.emoji-bytes').each(displayEmoji);
+    });
+
+    function toggle() {
+
+        var ele = document.getElementById("instructions");
+        var text = document.getElementById("displaytext");
+
+        if (ele.style.display == "none") {
+            ele.style.display = "block";
+            text.innerHTML = "(hide)";
+        } else {
+            ele.style.display = "none";
+            text.innerHTML = "(show)";
+        }
+    }
+
+    var yes = "good";
+
+    window.onload = function(e){ 
+    	var flags = $(".flag");
+    	for (var i = 0; i < flags.length; ++i) {
+	    	if (parseFloat(flags[i].innerHTML) >= 0.) {
+	    		// Change the value of corresponding slider
+	    		var update = inversesigmoid(parseFloat(flags[i].innerHTML));
+	    		console.log(update);
+	    		$("#slide" + (i + 1)).val(update * 100.);	 
+	    		$("#slide" + (i + 1)).val(update * 100.);
+          var update_value = parseFloat(flags[i].innerHTML);
+          // We have to redesign the odd representation.
+            if (update_value > 0. && update_value <= 50.00) {
+              var normalize = 100. / update_value;
+              var text = "<span style=\"color: black;\">a </span><strong>" + 1 + " in " + normalize.toLocaleString() + "</strong>";
+              $("#myRange" + (i + 1)).html(text);
+            }
+            else if (update_value > 50.00) {
+              var text = "<span style=\"color: black;\">a </span><strong>" + update_value.toFixed(5) + "%<stong>";
+              $("#myRange" + (i + 1)).html(text);
+            }
+            else {
+              $("#myRange" + (i + 1)).html("<strong>no</strong>");
+            }
+            var background_color = LinearColorInterpolator.findColorBetween(ultimate_red, ultimate_blue, update_value).asRgbCss();
+            $("#myRange" + (i + 1)).css("color", background_color);
+          // We have to redesign the odd representation.
+          $("#il" + (i + 1)).val(flags[i].innerHTML);
+	    		$("#iu" + (i + 1)).val(flags[i].innerHTML);	
+	    		$("#slide" + (i + 1)).attr("disabled", "disabled");
+	    	}
+    	}
+	}
+
+    </script>
+<div class="row col-xs-12 col-md-12">
+<div class="panel panel-primary">
+<h1 class="panel-heading"><strong><span style="color: #1E1518;">Uncertain Natural Language Inference</span></strong></h1>
+
+<h3><strong>[Instructions]</strong></h3>
+
+<div class="panel-body">
+    <!-- <p class="instr" style="color: red;">To Experienced Turkers: our instruction has been updated, please read the new instruction carefully before doing the HIT.</p> -->
+    <!-- <p class="instr" style="color: red;">The number of question per HIT has been reduced to 5.</p> -->
+<p class="instr">Welcome! Thank you for participating in this task. The purpose of this HIT is to estimate how possible the hypothesis is giving the context. Please read the instructions carefully.</p>
+
+<p class="instr">You will be presented with <b>5</b> premises hypothesis pairs. All of the pairs have the same premise.</p>
+
+<p class="instr">You are to estimate how likely the situation described in the hypothesis sentence would be true giving the premise.</p>
+
+<p class="instr">If you have any questions, please send an e-mail to <a href="mailto:commonsenseinference@gmail.com"><strong>commonsenseinference@gmail.com</strong></a></p>
+
+<p class="instr"><strong>Direction Details </strong><a href="javascript:toggle();" id="displaytext" style="font-size: 100%;">(hide)</a></p>
+
+<div id="instructions" style="background-color: #EEEBFF;">
+<ul>
+	<li>
+	<p class="instr">Please estimate how likely the hypothesis is giving the premise.</p>
+	</li>
+	<li>
+	<p><span class="emph"><strong>Move the slider handle to adjust the probability estimation.</strong></span></p>
+	</li>
+	<li>
+	<p>You may move the green buttons and also use up (&uarr;) and down (&darr;) arrow keys for fine adjustment.</p>
+	</li>
+</ul>
+
+<p>Some examples and suggested scores are given below. We <strong>strongly recommend you to calibrate your score for a specific element in respect to the score you've given for other elements in the same hit.</strong> We believe this will make your result more precise and accurate.&nbsp;</p>
+
+<hr />
+<p class="sentence">Premise: <u>A man is seen through the window that has intricate detail.</u></p>
+
+<p class="sentence">Hypothesis: <strong>A man is sitting behind a window.</strong></p>
+
+<div align="center" id="slidecontainer"><strong class="red">Impossible</strong> <input class="slider" disabled="disabled" id="exslide1" max="100" min="0" name="exrange1" oninput="updateSlider3(this.value);" type="range" value="50" /> <strong class="blue">Very likely&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong></div>
+
+<hr />
+<p class="sentence">Premise: <u>A guitarist for a band looks intently on as he plays his guitar with determination.</u></p>
+
+<p class="sentence">Hypothesis: <strong>The guitarist is in a band.</strong></p>
+
+<div align="center" id="slidecontainer"><strong class="red">Impossible</strong> <input class="slider" disabled="disabled" id="exslide2" max="100" min="0" name="exrange2" oninput="updateSlider1(this.value);" type="range" value="96" /> <strong class="blue">Very likely&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong></div>
+
+<hr />
+<p class="sentence">Premise: <u>Two young girls wrapped in holiday garland pose for the camera.</u></p>
+
+<p class="sentence">Hypothesis: <strong>Two girls are sleeping.</strong></p>
+
+<div align="center" id="slidecontainer"><strong class="red">Impossible</strong> <input class="slider" disabled="disabled" id="exslide3" max="100" min="0" name="exrange3" oninput="updateSlider5(this.value);" type="range" value="4" /> <strong class="blue">Very likely&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong></div>
+
+<hr />
+<p class="sentence">Premise: <u>A small baby is in a plastic cradle.</u></p>
+
+<p class="sentence">Hypothesis: <strong>An infant is resting.</strong></p>
+
+<div align="center" id="slidecontainer"><strong class="red">Impossible</strong> <input class="slider" disabled="disabled" id="exslide4" max="100" min="0" name="exrange4" oninput="updateSlider2(this.value);" type="range" value="75" /> <strong class="blue">Very likely&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong></div>
+
+<hr />
+<p class="sentence">Premise: <u>A man mourning aside a tombstone.</u></p>
+
+<p class="sentence">Hypothesis: <strong>A man breaks a tombstone.</strong></p>
+
+<div align="center" id="slidecontainer"><strong class="red">Impossible</strong> <input class="slider" disabled="disabled" id="exslide5" max="100" min="0" name="exrange5" oninput="updateSlider4(this.value);" type="range" value="20" /> <strong class="blue">Very likely&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong></div>
+
+<hr /></div>
+</div>
+</div>
+&nbsp;
+
+<section>
+<h3><strong>[Questions]</strong></h3>
+
+<fieldset>
+<p class="flag" hidden="">${anchored1}</p>
+
+<p class="sentence">Premise: <u>${cont1}</u></p>
+
+<p class="sentence">Hypothesis: <strong>${hypo1}</strong></p>
+
+<div align="center" id="slidecontainer">
+<p style="font-size: 120%;">There's <span id="myRange1" style="color: rgb(127, 0, 128);"><span style="color: black;">a </span><strong>1 in 2.0000</strong></span> chance the hypothesis is true giving the context.<input id="il1" name="il1" type="hidden" value="50.00" /><input id="iu1" name="iu1" type="hidden" value="50.00" /></p>
+<strong class="red">Impossible</strong> <input class="slider" id="slide1" max="10000" min="0" name="range1" oninput="updateSlider1(this.value);" type="range" value="5000" /> <strong class="blue">Very likely&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong></div>
+
+<hr />
+<p class="flag" hidden="">${anchored2}</p>
+
+<p class="sentence">Premise: <u>${cont2}</u></p>
+
+<p class="sentence">Hypothesis: <strong>${hypo2}</strong></p>
+
+<div align="center" id="slidecontainer">
+<p style="font-size: 120%;">There's <span id="myRange2" style="color: rgb(127, 0, 128);"><span style="color: black;">a </span><strong>1 in 2.0000</strong></span> chance the hypothesis is true giving the context.<input id="il2" name="il2" type="hidden" value="50.00" /><input id="iu2" name="iu2" type="hidden" value="50.00" /></p>
+<strong class="red">Impossible</strong> <input class="slider" id="slide2" max="10000" min="0" name="range2" oninput="updateSlider2(this.value);" type="range" value="5000" /> <strong class="blue">Very likely&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong></div>
+
+<hr />
+<p class="flag" hidden="">${anchored3}</p>
+
+<p class="sentence">Premise: <u>${cont3}</u></p>
+
+<p class="sentence">Hypothesis: <strong>${hypo3}</strong></p>
+
+<div align="center" id="slidecontainer">
+<p style="font-size: 120%;">There's <span id="myRange3" style="color: rgb(127, 0, 128);"><span style="color: black;">a </span><strong>1 in 2.0000</strong></span> chance the hypothesis is true giving the context.<input id="il3" name="il3" type="hidden" value="50.00" /><input id="iu3" name="iu3" type="hidden" value="50.00" /></p>
+<strong class="red">Impossible</strong> <input class="slider" id="slide3" max="10000" min="0" name="range3" oninput="updateSlider3(this.value);" type="range" value="5000" /> <strong class="blue">Very likely&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong></div>
+
+<hr />
+<p class="flag" hidden="">${anchored4}</p>
+
+<p class="sentence">Premise: <u>${cont4}</u></p>
+
+<p class="sentence">Hypothesis: <strong>${hypo4}</strong></p>
+
+<div align="center" id="slidecontainer">
+<p style="font-size: 120%;">There's <span id="myRange4" style="color: rgb(127, 0, 128);"><span style="color: black;">a </span><strong>1 in 2.0000</strong></span> chance the hypothesis is true giving the context.<input id="il4" name="il4" type="hidden" value="50.00" /><input id="iu4" name="iu4" type="hidden" value="50.00" /></p>
+<strong class="red">Impossible</strong> <input class="slider" id="slide4" max="10000" min="0" name="range4" oninput="updateSlider4(this.value);" type="range" value="5000" /> <strong class="blue">Very likely&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong></div>
+
+<hr />
+<p class="flag" hidden="">${anchored5}</p>
+
+<p class="sentence">Premise: <u>${cont5}</u></p>
+
+<p class="sentence">Hypothesis: <strong>${hypo5}</strong></p>
+
+<div align="center" id="slidecontainer">
+<p style="font-size: 120%;">There's <span id="myRange5" style="color: rgb(127, 0, 128);"><span style="color: black;">a </span><strong>1 in 2.0000</strong></span> chance the hypothesis is true giving the context.<input id="il5" name="il5" type="hidden" value="50.00" /><input id="iu5" name="iu5" type="hidden" value="50.00" /></p>
+<strong class="red">Impossible</strong> <input class="slider" id="slide5" max="10000" min="0" name="range5" oninput="updateSlider5(this.value);" type="range" value="5000" /> <strong class="blue">Very likely&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</strong></div>
+
+<hr />
+<p><span style="font-size: 15px;">Comments and feedback (This is optional. Please leave a comment if you have any questions, find issues, etc.)</span></p>
+<span style="font-size: 14px;"><textarea class="form-control" cols="120" name="Comments" rows="5"></textarea></span></fieldset>
+</section>
+</div>
+
+<p><span style="font-size: 0px; color: #FFFFFF;"><!-- these meta info are helpful for analysis --> ${id1} ${id2} ${id3} ${id4} ${id5} </span></p>
+</section>
+<style type="text/css">fieldset { padding: 10px; background:#fbfbfb; border-radius:5px; margin-bottom:5px; }
+</style>
+
