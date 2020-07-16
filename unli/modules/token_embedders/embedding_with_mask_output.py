@@ -3,7 +3,7 @@ import torch
 from allennlp.modules.token_embedders import Embedding
 from allennlp.modules.elmo import Elmo
 from abc import ABC, abstractmethod
-import pytorch_transformers as pt
+import transformers
 
 
 class EmbeddingWithMaskOutput(ABC, torch.nn.Module):
@@ -69,11 +69,11 @@ class WrappedELMo(EmbeddingWithMaskOutput):
         return elmo_repr, elmo_mask
 
 
-class WrappedBERT(pt.BertPreTrainedModel, EmbeddingWithMaskOutput):
+class WrappedBERT(transformers.BertPreTrainedModel, EmbeddingWithMaskOutput):
 
-    def __init__(self, config: pt.BertConfig):
+    def __init__(self, config: transformers.BertConfig):
         super(WrappedBERT, self).__init__(config)
-        self.bert = pt.BertModel(config)
+        self.bert = transformers.BertModel(config)
 
     @classmethod
     def from_params(cls, vocab, params):
@@ -84,5 +84,9 @@ class WrappedBERT(pt.BertPreTrainedModel, EmbeddingWithMaskOutput):
                 ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         mask = x > 0
-        emb, pooled = self.bert(x, None, mask, False)
+        emb, pooled = self.bert(
+            input_ids=x,
+            attention_mask=mask,
+            output_hidden_states=False
+        )
         return emb, mask

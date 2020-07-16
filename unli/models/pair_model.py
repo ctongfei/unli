@@ -19,7 +19,6 @@ import unli.modules.loss.hinge
 import unli.modules.loss.hinge_ranking
 from unli.utils.trec_eval import *
 import scipy.stats
-import pytorch_transformers as ptb
 
 
 class SentencePairModel(Model):

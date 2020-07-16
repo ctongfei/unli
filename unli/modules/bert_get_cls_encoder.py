@@ -2,7 +2,6 @@ from typing import *
 import torch
 import numpy as np
 import pdb
-import pytorch_transformers as pt
 from allennlp.modules.seq2vec_encoders import Seq2VecEncoder
 
 

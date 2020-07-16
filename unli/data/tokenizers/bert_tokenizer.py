@@ -1,12 +1,15 @@
 from allennlp.data.tokenizers import Token, Tokenizer
 from typing import *
-import pytorch_pretrained_bert as ptb
+import transformers
 
 
 class BertTokenizer(Tokenizer):
 
-    def __init__(self, pretrained_model_name: str = "bert-base-uncased", prefix: str = None, suffix: str = None):
-        self.underlying = ptb.BertTokenizer.from_pretrained(pretrained_model_name)
+    def __init__(self,
+                 pretrained_model_name: str = "bert-base-uncased",
+                 prefix: str = "[CLS]",
+                 suffix: str = "[SEP]"):
+        self.underlying = transformers.BertTokenizer.from_pretrained(pretrained_model_name)
         self.prefix = prefix
         self.suffix = suffix
 

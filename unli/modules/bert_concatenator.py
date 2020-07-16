@@ -1,8 +1,6 @@
 import torch
-import pytorch_pretrained_bert as ptb
 from typing import *
 from unli.modules.joiner import Joiner
-import pdb
 
 
 class BERTConcatenator(Joiner):

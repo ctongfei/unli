@@ -3,11 +3,13 @@ from unli.models import SentencePairModel
 from unli.modules import CoupledSentencePairFeatureExtractor, BERTConcatenator, BertSeq2VecEncoderForPairs, MLP
 from unli.data.qrels import QRelsPointwiseReader
 from unli.data.tokenizers import BertTokenizer
-from allennlp.data.token_indexers import PretrainedBertIndexer
+from allennlp.common import Params
+from allennlp.data.token_indexers import PretrainedTransformerIndexer
 from allennlp.data.iterators import BasicIterator
 from allennlp.training import Trainer
 from allennlp.data import Vocabulary
 import torch
+import logging
 from torch.optim import Adam
 
 
@@ -18,10 +20,11 @@ parser.add_argument("--out", type=str, default="", help="Output path")
 parser.add_argument("--margin", type=float, default=0.3, help="")
 parser.add_argument("--num_samples", type=int, default=1, help="")
 parser.add_argument("--seed", type=int, default=0xCAFEBABE, help="")
+parser.add_argument("--batch_size", type=int, default=16, help="")
 parser.add_argument("--gpuid", type=int, default=0)
 ARGS = parser.parse_args()
 
-batch_size = 16
+logging.basicConfig(level=logging.INFO)
 torch.manual_seed(ARGS.seed)
 vocab = Vocabulary()
 
@@ -44,12 +47,13 @@ if ARGS.pretrained != "":
 
 reader = QRelsPointwiseReader(
     lazy=True,
-    token_indexers={"wordpiece": PretrainedBertIndexer("bert-base-uncased")},
+    token_indexers={"wordpiece": PretrainedTransformerIndexer("bert-base-uncased", do_lowercase=True)},
     left_tokenizer=BertTokenizer(),
     right_tokenizer=BertTokenizer()
 )
-iterator = BasicIterator()
+iterator = BasicIterator(batch_size=ARGS.batch_size)
 iterator.index_with(vocab)
+
 
 trainer = Trainer(
     model=model,
